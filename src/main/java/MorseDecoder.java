@@ -52,9 +52,12 @@ public class MorseDecoder {
         double[] returnBuffer = new double[totalBinCount];
 
         double[] sampleBuffer = new double[BIN_SIZE * inputFile.getNumChannels()];
+        int numSamples = 0;
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
-            // Get the right number of samples from the inputFile
-            // Sum all the samples together and store them in the returnBuffer
+            inputFile.readFrames(sampleBuffer, BIN_SIZE);
+            for (double d : sampleBuffer) {
+                returnBuffer[binIndex] += Math.abs(d);
+            }
         }
         return returnBuffer;
     }
@@ -68,7 +71,7 @@ public class MorseDecoder {
     /**
      * Convert power measurements to dots, dashes, and spaces.
      * <p>
-     * This function receives the result from binWavPower. It's job is to convert intervals of tone
+     * This function receives the result from binWavPower. Its job is to convert intervals of tone
      * or silence into dots (short tone), dashes (long tone), or space (long silence).
      * <p>
      * Write this function.
@@ -87,7 +90,36 @@ public class MorseDecoder {
         // else if issilence and wassilence
         // else if issilence and not wassilence
 
-        return "";
+        boolean wasPower = false;
+        int counter = 0;
+        int silentCounter = 0;
+        String output = "";
+        for (double p : powerMeasurements) {
+            if (p >= POWER_THRESHOLD) {
+                if (wasPower) {
+                    counter++;
+                } else {
+                    if (silentCounter >= DASH_BIN_COUNT) {
+                        output += " ";
+                    }
+                    counter++;
+                    wasPower = true;
+                }
+                silentCounter = 0;
+            } else {
+                silentCounter++;
+                if (wasPower) {
+                    if (counter >= DASH_BIN_COUNT) {
+                        output += "-";
+                    } else {
+                        output += ".";
+                    }
+                    wasPower = false;
+                    counter = 0;
+                }
+            }
+        }
+        return output;
     }
 
     /**
